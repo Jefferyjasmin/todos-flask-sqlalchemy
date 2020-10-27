@@ -17,3 +17,23 @@ class User(db.Model):
             "email": self.email,
             # do not serialize the password, its a security breach
         }
+
+
+class Task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    done = db.Column(db.Boolean(), unique=False, nullable=True)
+    label = db.Column(db.String(100), unique=True, nullable=False)
+    user_name = db.Column(db.String(100), unique=False, nullable=False)
+
+    def __repr__(self):
+        return '<Task %r>' % self.user_name
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "done": self.done,
+            "label": self.label,
+            "user_name": self.user_name
+
+            # do not serialize the password, its a security breach
+        }
