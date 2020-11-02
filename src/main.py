@@ -8,7 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User
+from models import db, User,Task
 #from models import Person
 
 app = Flask(__name__)
@@ -30,14 +30,52 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/user', methods=['GET'])
-def handle_hello():
+@app.route('/todos/<username>', methods=['GET'])
+def handle_get(username):
+    task = Task.query.filter_by(username=username)
+    task = list(map(lambda x: x.serialize(), task))
+    return jsonify(task), 200
 
-    response_body = {
-        "msg": "Hello, this is your GET /user response "
-    }
+@app.route('/todos/<username>', methods=['POST'])
+def handle_post(username):
 
-    return jsonify(response_body), 200
+    body = request.get_json()
+    exists = Task.query.filter_by(username=username, label=body['label']).first()
+    if exists is not None:
+        raise APIException('task already exists',status_code=404)
+    task = Task(label=body['label'],done=body['done'],username=username)
+    db.session.add(task)
+    db.session.commit()
+    return jsonify(task.serialize()),200
+
+@app.route('/todos/<int:id>', methods=['PUT'])
+def handle_PUT(id):
+    body = request.get_json()
+    task_item = Task.query.get(id)
+    task_item.done = body['done']
+    task_item.label = body['label']
+    db.session.commit()
+    updated_task = Task.query.get(id)
+    updated_task = updated_task.serialize()
+    return jsonify(updated_task),200
+
+
+@app.route('/todos/<username>/<int:id>', methods=['DELETE'])
+def handle_delete(username,id):
+    task = Task.query.get(id)
+    if task is None: 
+        raise APIException("Task doesnt exists",status_code=404)
+    db.session.delete(task)
+    db.session.commit()
+    tasks = Task.query.filter_by(username=username)
+    tasks = list(map(lambda x: x.serialize(),tasks))
+    return jsonify(tasks),200
+
+
+
+  
+ 
+
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
